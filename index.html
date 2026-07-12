@@ -1377,6 +1377,13 @@
       },
 
       async save(table, data) {
+        // Guard: id wajib ada sebelum upsert ke Supabase
+        if (!data || !data.id) {
+          console.error(`[PESTA17] Supa.save('${table}') dipanggil tanpa id!`, JSON.stringify(data || {}).slice(0, 200));
+          Toast.show(`Gagal menyimpan ${table}: data tidak memiliki ID. Periksa console.`, "error");
+          return;
+        }
+
         // 1. Save to AppState memory
         if (table === 'info') {
           const idx = AppState.info.findIndex(item => item.id === data.id);
@@ -3747,14 +3754,11 @@
               Toast.show("Memulihkan cadangan & menyinkronkan data ke Cloud...", "info");
               const tables = ['info', 'dusun', 'panitia', 'lomba', 'peserta', 'anggaran', 'sponsor', 'inventaris', 'timeline', 'dokumentasi'];
               for (const tbl of tables) {
-                const payload = tbl === 'info' ? { id: "main-info", ...AppState.info } : AppState[tbl];
-                // Chunk upload or simple upsert
-                if (Array.isArray(payload)) {
-                  for (const row of payload) {
+                const rows = AppState[tbl] || [];
+                for (const row of rows) {
+                  if (row && row.id) {
                     await Supa.db.from(`pesta17_${tbl}`).upsert(row);
                   }
-                } else {
-                  await Supa.db.from(`pesta17_${tbl}`).upsert(payload);
                 }
               }
             }
