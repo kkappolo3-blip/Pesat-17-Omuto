@@ -1,21 +1,28 @@
 // PESTA 17 - Service Worker
 // Strategy:
-//   - Static assets  → Cache First
-//   - Supabase/API   → Network First (never cached)
+//   - HTML shell (index.html/navigasi) → Network First, so setiap deploy baru
+//     LANGSUNG terpakai. (Sebelumnya Cache First membuat pengguna bisa
+//     terjebak selamanya di versi index.html lama walau sudah di-deploy ulang
+//     — ini akar penyebab "bug yang sudah diperbaiki tapi masih muncul".)
+//   - Aset statis (ikon, manifest)  → Cache First (jarang berubah)
+//   - Supabase/API                 → Network Only (tidak pernah di-cache)
 
-const CACHE_NAME = 'pesta17-v1';
+// PENTING: naikkan versi ini SETIAP kali index.html di-deploy ulang, supaya
+// service worker lama dibuang dan tidak ada cache basi yang tersisa.
+const CACHE_VERSION = 'v2-2026-07-12';
+const CACHE_NAME = `pesta17-${CACHE_VERSION}`;
 const OFFLINE_URL = '/offline.html';
 
 // Assets to precache on install
 const PRECACHE_ASSETS = [
-  '/',
-  '/index.html',
   '/offline.html',
   '/manifest.webmanifest',
   '/icon-192.png',
   '/icon-512.png',
   '/maskable-icon.png',
-  // External fonts & libs are handled by runtime caching
+  // '/' dan '/index.html' SENGAJA tidak di-precache di sini karena
+  // keduanya harus selalu diambil dari jaringan terlebih dahulu (lihat
+  // networkFirstForDocument di bawah).
 ];
 
 // ------------------------------------------------------------------
@@ -35,7 +42,7 @@ self.addEventListener('install', (event) => {
 });
 
 // ------------------------------------------------------------------
-// ACTIVATE — clean old caches
+// ACTIVATE — clean old caches (semua versi lama dibuang otomatis)
 // ------------------------------------------------------------------
 self.addEventListener('activate', (event) => {
   event.waitUntil(
@@ -78,9 +85,16 @@ self.addEventListener('fetch', (event) => {
   // 2. Non-GET → always network
   if (request.method !== 'GET') return;
 
-  // 3. Static local assets → Cache First
+  // 3. HTML document / navigation (index.html) → ALWAYS Network First.
+  //    This guarantees every new deploy is visible immediately instead of
+  //    being masked by a stale cached copy of the app.
+  if (request.mode === 'navigate' || request.destination === 'document') {
+    event.respondWith(networkFirstForDocument(request));
+    return;
+  }
+
+  // 4. Other same-origin static assets (icons, manifest) → Cache First
   if (
-    request.destination === 'document' ||
     request.destination === 'script'   ||
     request.destination === 'style'    ||
     request.destination === 'image'    ||
@@ -96,6 +110,24 @@ self.addEventListener('fetch', (event) => {
 // ------------------------------------------------------------------
 // Helpers
 // ------------------------------------------------------------------
+async function networkFirstForDocument(request) {
+  try {
+    const response = await fetch(request, { cache: 'no-store' });
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      cache.put(request, response.clone());
+    }
+    return response;
+  } catch {
+    // Offline: fall back to whatever was last cached, then to offline.html
+    const cached = await caches.match(request);
+    if (cached) return cached;
+    const offline = await caches.match(OFFLINE_URL);
+    if (offline) return offline;
+    return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
+  }
+}
+
 async function cacheFirstWithOfflineFallback(request) {
   const cached = await caches.match(request);
   if (cached) return cached;

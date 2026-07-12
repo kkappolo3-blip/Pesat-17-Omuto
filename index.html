@@ -488,6 +488,34 @@
       error_log: []
     };
 
+    // Robust unique ID generator — timestamp + random suffix so IDs never
+    // collide even when several records are created in the same millisecond
+    // (e.g. seeding several milestones/checklists in a synchronous loop).
+    // This never returns a falsy/empty value, which prevents the
+    // 'null value in column "id"' Supabase error caused by missing IDs.
+    function genId(prefix) {
+      return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    }
+
+    // Render a multi-line rundown/kontak string as a real vertical list —
+    // one row per line — instead of relying only on CSS white-space, so the
+    // schedule always stacks downward per jam regardless of how the raw
+    // text was saved.
+    function renderRundownRows(text) {
+      const lines = String(text || "").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      if (!lines.length) return `<p style="color:var(--text-secondary);">Rundown belum diisi.</p>`;
+      return `<div style="display:flex;flex-direction:column;gap:0.6rem;">${lines.map(line => {
+        const parts = line.split(/:(.+)/); // split "JAM : Kegiatan" on first colon
+        const hasTime = parts.length > 1 && parts[0].trim().length <= 20;
+        const time = hasTime ? parts[0].trim() : "";
+        const desc = hasTime ? parts[1].trim() : line;
+        return `<div style="display:flex;gap:0.75rem;align-items:flex-start;padding:0.6rem 0.75rem;background:var(--bg-primary);border:1px solid var(--border-color);border-left:3px solid var(--accent-red);border-radius:6px;">
+          ${time ? `<span style="font-family:var(--font-mono);font-weight:700;font-size:0.8rem;white-space:nowrap;color:var(--accent-red);">${time}</span>` : ""}
+          <span style="font-size:0.85rem;line-height:1.5;">${desc}</span>
+        </div>`;
+      }).join('')}</div>`;
+    }
+
     // Deep copy / fetch local storage helper
     const getLocalCopy = (key, defaultVal) => {
       const stored = localStorage.getItem(key);
@@ -518,7 +546,7 @@
       const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
       
       const newLog = {
-        id: "log-" + Date.now() + "-" + Math.random().toString(36).substr(2, 5),
+        id: genId("log"),
         event_id: AppState.active_event_id || "global",
         tanggal: dateStr,
         jam: timeStr,
@@ -587,7 +615,7 @@
       },
       async addEvent(nama, infoObj = {}) {
         checkAdminAccess();
-        const id = "evt-" + Date.now();
+        const id = genId("evt");
         const newEvent = { id, nama, status: 'Aktif' };
         
         AppState.events.push(newEvent);
@@ -596,7 +624,7 @@
 
         // Bind setup info for this specific event
         const newInfo = {
-          id: "inf-" + Date.now(),
+          id: genId("inf"),
           event_id: id,
           nama_kegiatan: nama,
           tema: infoObj.tema || "Persatuan & Kebangsaan",
@@ -697,7 +725,7 @@
       },
       async addDusun(data) {
         checkAdminAccess();
-        const id = "dsn-" + Date.now();
+        const id = genId("dsn");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         AppState.dusun.push(newItem);
         logActivity("Dusun", `Menambah dusun baru: "${data.nama}"`);
@@ -723,7 +751,7 @@
       },
       async addParticipant(data) {
         checkAdminAccess();
-        const id = "pst-" + Date.now();
+        const id = genId("pst");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         AppState.peserta.push(newItem);
         logActivity("Peserta", `Mendaftar atlet baru: "${data.nama}"`);
@@ -764,7 +792,7 @@
       },
       async addCompetition(data) {
         checkAdminAccess();
-        const id = "lmb-" + Date.now();
+        const id = genId("lmb");
         const newItem = { id, event_id: EventManager.getActiveEventId(), skor: "", juara_1: "", juara_2: "", juara_3: "", ...data };
         AppState.lomba.push(newItem);
         logActivity("Lomba", `Menambah cabang lomba baru: "${data.nama_lomba}"`);
@@ -807,7 +835,7 @@
       },
       async addTransaction(data) {
         checkAdminAccess();
-        const id = "ang-" + Date.now();
+        const id = genId("ang");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         AppState.anggaran.push(newItem);
         logActivity("Anggaran", `Menambah pembukuan transaksi: "${data.nama_pengeluaran || data.deskripsi}"`);
@@ -853,7 +881,7 @@
       },
       async addCommittee(data) {
         checkAdminAccess();
-        const id = "pan-" + Date.now();
+        const id = genId("pan");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         AppState.panitia.push(newItem);
         logActivity("Panitia", `Menambah kepanitiaan: "${data.nama}"`);
@@ -885,7 +913,7 @@
       },
       async addSponsor(data) {
         checkAdminAccess();
-        const id = "sp-" + Date.now();
+        const id = genId("sp");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         AppState.sponsor.push(newItem);
         logActivity("Sponsor", `Menambah sponsor/mitra baru: "${data.nama_sponsor || data.nama}"`);
@@ -917,7 +945,7 @@
       },
       async addInventory(data) {
         checkAdminAccess();
-        const id = "inv-" + Date.now();
+        const id = genId("inv");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         AppState.inventaris.push(newItem);
         logActivity("Inventaris", `Menambah barang inventaris: "${data.nama_barang}"`);
@@ -974,7 +1002,7 @@
       },
       async addMilestone(data) {
         checkAdminAccess();
-        const id = "mst-" + Date.now();
+        const id = genId("mst");
         const newItem = { id, event_id: EventManager.getActiveEventId(), ...data };
         if (!AppState.dashboard_timeline) AppState.dashboard_timeline = [];
         AppState.dashboard_timeline.push(newItem);
@@ -1377,11 +1405,24 @@
       },
 
       async save(table, data) {
-        // Guard: id wajib ada sebelum upsert ke Supabase
-        if (!data || !data.id) {
-          console.error(`[PESTA17] Supa.save('${table}') dipanggil tanpa id!`, JSON.stringify(data || {}).slice(0, 200));
-          Toast.show(`Gagal menyimpan ${table}: data tidak memiliki ID. Periksa console.`, "error");
+        // Guard: id wajib ada dan berupa string non-kosong sebelum upsert ke
+        // Supabase. Ini mencegah error Postgres "null value in column id"
+        // yang terjadi jika suatu form/alur lupa menyertakan ID.
+        if (!data || typeof data !== 'object') {
+          console.error(`[PESTA17] Supa.save('${table}') dipanggil tanpa data!`);
+          Toast.show(`Gagal menyimpan ${table}: data kosong. Periksa console.`, "error");
           return;
+        }
+        if (!data.id || String(data.id).trim() === "") {
+          // Self-heal instead of silently failing: generate a safe ID rather
+          // than letting the request reach Supabase without one.
+          data.id = genId(table.slice(0, 3));
+          console.warn(`[PESTA17] Supa.save('${table}') dipanggil tanpa id — id baru dibuat otomatis: ${data.id}`);
+        }
+        // Normalize event_id too — most tables require it and a missing
+        // event_id can also break multi-event filtering silently.
+        if ('event_id' in data && (!data.event_id || String(data.event_id).trim() === "")) {
+          data.event_id = EventManager.getActiveEventId();
         }
 
         // 1. Save to AppState memory
@@ -1530,7 +1571,6 @@
         { id: "lomba", label: "Cabang Lomba & Skor", icon: "trophy" },
         { id: "anggaran", label: "Anggaran Keuangan", icon: "wallet" },
         { id: "sponsor", label: "Sponsor & Mitra", icon: "gift" },
-        { id: "inventaris", label: "Inventaris Barang", icon: "package" },
         { id: "dokumentasi", label: "Dokumentasi Media", icon: "camera" },
         { id: "laporan", label: "Laporan & Unduhan", icon: "file-text" },
         { id: "pengaturan", label: "Pengaturan Sistem", icon: "settings" },
@@ -1649,7 +1689,6 @@
               case "lomba": renderLomba(container); break;
               case "anggaran": renderBudget(container); break;
               case "sponsor": renderSponsor(container); break;
-              case "inventaris": renderInventaris(container); break;
               case "dokumentasi": renderDokumentasi(container); break;
               case "laporan": renderReports(container); break;
               case "pengaturan": renderSettings(container); break;
@@ -2045,7 +2084,7 @@
               <p style="font-size:.9rem;line-height:1.6;white-space:pre-line;">${info.pengumuman||'-'}</p>
             </div>
             <p style="font-size:.7rem;font-weight:700;text-transform:uppercase;color:var(--text-secondary);margin-bottom:.4rem;">Rundown Acara</p>
-            <div style="white-space:pre-line;line-height:1.8;font-family:var(--font-mono);font-size:.85rem;padding:.75rem;background:var(--bg-primary);border:1px solid var(--border-color);border-radius:8px;">${info.susunan_acara||'-'}</div>
+            ${renderRundownRows(info.susunan_acara)}
           </div>`;
 
           /* 2. Timeline */
@@ -2079,9 +2118,7 @@
           const sponCards = (AppState.sponsor||[]).map(s=>{let sb='badge-gray';if(s.status==='Dana Cair')sb='badge-green';else if(s.status==='MoU Ditandatangani')sb='badge-blue';else if(s.status==='Negosiasi')sb='badge-amber';return`<div class="card" style="display:flex;gap:.75rem;align-items:center;margin-bottom:0;"><div style="width:50px;height:50px;border-radius:8px;background:linear-gradient(135deg,var(--accent-red),#333);display:flex;align-items:center;justify-content:center;color:white;font-family:var(--font-display);font-weight:800;font-size:1.1rem;flex-shrink:0;">${s.nama_sponsor.slice(0,2).toUpperCase()}</div><div style="flex:1;"><p style="font-weight:800;font-family:var(--font-display);">${s.nama_sponsor}</p><p style="font-size:.85rem;font-weight:700;color:#10B981;">${fmtIDR(s.nilai_kontribusi)}</p><div style="display:flex;gap:.5rem;align-items:center;margin-top:.2rem;font-size:.75rem;"><span>Paket: <strong>${s.paket_sponsor}</strong></span><span class="badge ${sb}">${s.status}</span></div></div></div>`;}).join('');
           const s8 = `<div class="card" style="margin-top:1.5rem;">${sh('gift','Sponsor & Mitra')}<div class="grid-2">${sponCards||"<p style='color:var(--text-secondary);'>Belum ada sponsor.</p>"}</div></div>`;
 
-          /* 9. Inventaris */
-          const invRows = (AppState.inventaris||[]).map(i=>`<tr><td style="font-weight:600;">${i.nama_barang}</td><td style="font-family:var(--font-mono);font-weight:700;">${i.jumlah} Unit</td><td>${i.penanggung_jawab}</td><td>${i.lokasi_penyimpanan}</td><td><span class="badge ${i.kondisi==='Baik'?'badge-green':i.kondisi==='Dipinjam'?'badge-blue':'badge-red'}">${i.kondisi}</span></td></tr>`).join('');
-          const s9 = `<div class="card" style="margin-top:1.5rem;">${sh('package','Inventaris Barang')}<div class="table-container"><table><thead><tr><th>Nama Barang</th><th>Jumlah</th><th>PJ</th><th>Lokasi</th><th>Kondisi</th></tr></thead><tbody>${invRows||"<tr><td colspan='5' style='text-align:center;'>Belum ada data.</td></tr>"}</tbody></table></div></div>`;
+          const s9 = '';
 
           /* 10. Dokumentasi */
           const dokCards = (AppState.dokumentasi||[]).map(d=>`<div class="card" style="padding:0;overflow:hidden;display:flex;flex-direction:column;margin-bottom:0;"><img src="${d.foto_base64||'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500'}" alt="${d.keterangan}" style="width:100%;height:160px;object-fit:cover;" referrerpolicy="no-referrer"><div style="padding:.75rem;"><p style="font-weight:700;font-size:.9rem;line-height:1.4;">${d.keterangan}</p><div style="display:flex;justify-content:space-between;font-size:.75rem;color:var(--text-secondary);margin-top:.35rem;"><span>📅 ${d.tanggal_unggah}</span><span>PJ: ${d.diunggah_oleh}</span></div></div></div>`).join('');
@@ -2111,7 +2148,7 @@
           
           // Merge details
           const merged = { ...info, ...result };
-          merged.id = merged.id || ('inf-' + Date.now());
+          merged.id = merged.id || genId('inf');
           merged.event_id = merged.event_id || EventManager.getActiveEventId();
           logActivity("Dashboard", "Memperbarui konfigurasi utama acara");
           await Supa.save('info', merged);
@@ -2145,7 +2182,7 @@
         ], async (result) => {
           UI.showLoadingOverlay("Menyimpan...", "Menambah checklist persiapan...");
           const newItem = {
-            id: "chk-" + Date.now(),
+            id: genId("chk"),
             event_id: activeEvent.id,
             label: result.label,
             checked: false
@@ -2306,8 +2343,8 @@
         <!-- Rundown Acara -->
         <div class="card">
           <h3 class="card-title" style="margin-bottom:1rem;"><i data-lucide="clock"></i> Rundown Acara Utama</h3>
-          <div style="white-space: pre-line; line-height:1.8; font-family: var(--font-mono); font-size:0.85rem; padding: 1rem; background-color: var(--bg-primary); border-radius:8px; border:1px solid var(--border-color);">
-            ${info.susunan_acara}
+          <div>
+            ${renderRundownRows(info.susunan_acara)}
           </div>
         </div>
       `;
@@ -2331,7 +2368,7 @@
         { id: "pengumuman", label: "Pengumuman Tambahan", type: "textarea", value: info.pengumuman, required: true }
       ], (data) => {
         const merged = { ...info, ...data };
-        merged.id = merged.id || ('inf-' + Date.now());
+        merged.id = merged.id || genId('inf');
         merged.event_id = merged.event_id || EventManager.getActiveEventId();
         Supa.save('info', merged);
         UI.refreshCurrentView();
@@ -2415,7 +2452,7 @@
         { id: "tanggal_target", label: "Target Selesai", type: "date", required: true, value: new Date().toISOString().slice(0, 10) },
         { id: "status", label: "Status Awal", type: "select", options: ["Belum Mulai", "Proses", "Selesai"] }
       ], (data) => {
-        const newTask = { id: "tl-" + Date.now(), event_id: EventManager.getActiveEventId(), ...data };
+        const newTask = { id: genId("tl"), event_id: EventManager.getActiveEventId(), ...data };
         Supa.save('timeline', newTask);
         UI.refreshCurrentView();
       });
@@ -2576,7 +2613,7 @@
 
         try {
           // 1. Create Event row
-          const activeId = "evt-" + Date.now();
+          const activeId = genId("evt");
           const newEvent = {
             id: activeId,
             nama: namaAcara,
@@ -2604,8 +2641,8 @@
             lokasi: lokasi,
             tanggal: tanggal,
             jam_kegiatan: "08:00",
-            susunan_acara: "08:00 - 09:30 : Upacara Bendera Kemerdekaan\\n09:30 - 12:00 : Lomba Anak-Anak & Ibu-Ibu\\n13:00 - 17:00 : Final Turnamen Olahraga Warga\\n19:30 - Selesai : Pentas Seni & Pembagian Hadiah",
-            kontak_panitia: "Budi Santoso (Ketua) - 08123456789\\nSiti Rahma (Sekretaris) - 08234567890",
+            susunan_acara: "08:00 - 09:30 : Upacara Bendera Kemerdekaan\n09:30 - 12:00 : Lomba Anak-Anak & Ibu-Ibu\n13:00 - 17:00 : Final Turnamen Olahraga Warga\n19:30 - Selesai : Pentas Seni & Pembagian Hadiah",
+            kontak_panitia: "Budi Santoso (Ketua) - 08123456789\nSiti Rahma (Sekretaris) - 08234567890",
             pengumuman: `Selamat Datang di Portal Resmi ${namaAcara}! Ikuti terus jadwal pertandingan dan klasemen perolehan medali dusun secara real-time.`,
             faq: JSON.stringify([
               { q: "Siapa saja yang boleh mendaftar lomba?", a: "Seluruh warga desa yang berdomisili sah di dusun setempat." },
@@ -2617,9 +2654,9 @@
 
           // Seed 3 standard timeline milestones
           const milestones = [
-            { id: "mst-1-" + Date.now(), event_id: activeId, label: "H-30 Perencanaan", status: "Selesai" },
-            { id: "mst-2-" + Date.now(), event_id: activeId, label: "H-15 Logistik", status: "Belum Mulai" },
-            { id: "mst-3-" + Date.now(), event_id: activeId, label: "H-3 Pelaksanaan", status: "Belum Mulai" }
+            { id: genId("mst"), event_id: activeId, label: "H-30 Perencanaan", status: "Selesai" },
+            { id: genId("mst"), event_id: activeId, label: "H-15 Logistik", status: "Belum Mulai" },
+            { id: genId("mst"), event_id: activeId, label: "H-3 Pelaksanaan", status: "Belum Mulai" }
           ];
           for (const m of milestones) {
             if (!AppState.dashboard_timeline) AppState.dashboard_timeline = [];
@@ -2629,10 +2666,10 @@
 
           // Seed standard checklist
           const checklists = [
-            { id: "chk-1-" + Date.now(), event_id: activeId, label: "Pembentukan Panitia & SK Kepala Desa", checked: true },
-            { id: "chk-2-" + Date.now(), event_id: activeId, label: "Pembuatan & Pengajuan Proposal Kegiatan", checked: true },
-            { id: "chk-3-" + Date.now(), event_id: activeId, label: "Persiapan Lapangan & Peralatan Lomba", checked: false },
-            { id: "chk-4-" + Date.now(), event_id: activeId, label: "Pembelian Trophy & Hadiah Utama", checked: false }
+            { id: genId("chk"), event_id: activeId, label: "Pembentukan Panitia & SK Kepala Desa", checked: true },
+            { id: genId("chk"), event_id: activeId, label: "Pembuatan & Pengajuan Proposal Kegiatan", checked: true },
+            { id: genId("chk"), event_id: activeId, label: "Persiapan Lapangan & Peralatan Lomba", checked: false },
+            { id: genId("chk"), event_id: activeId, label: "Pembelian Trophy & Hadiah Utama", checked: false }
           ];
           for (const c of checklists) {
             if (!AppState.checklist_persiapan) AppState.checklist_persiapan = [];
@@ -2768,7 +2805,7 @@
         { id: "ketua_kontingen", label: "Ketua Kontingen", required: true, placeholder: "Contoh: Pak Supri" },
         { id: "catatan", label: "Keterangan / Slogan", type: "textarea", placeholder: "Contoh: Unggul di panjat tebing." }
       ], (data) => {
-        const id = "dsn-" + Date.now();
+        const id = genId("dsn");
         Supa.save('dusun', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
@@ -2953,7 +2990,7 @@
         { id: "no_hp", label: "No HP / WhatsApp Atlet", placeholder: "Contoh: 0812..." },
         { id: "status_kehadiran", label: "Status Kehadiran Awal", type: "select", options: ["Hadir", "Belum Hadir"] }
       ], (data) => {
-        const id = "pst-" + Date.now();
+        const id = genId("pst");
         Supa.save('peserta', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
@@ -3063,7 +3100,7 @@
         { id: "aturan", label: "Regulasi & Aturan Lomba", type: "textarea", placeholder: "Contoh: Dilarang memegang kelereng dengan tangan..." },
         { id: "juri", label: "Nama Penilai / Juri Utama", required: true, placeholder: "Contoh: Mas Agus" }
       ], (data) => {
-        const id = "lmb-" + Date.now();
+        const id = genId("lmb");
         Supa.save('lomba', { id, event_id: EventManager.getActiveEventId(), juara_1: "", juara_2: "", juara_3: "", ...data });
         UI.refreshCurrentView();
       });
@@ -3214,7 +3251,7 @@
         { id: "sumber_dana_atau_pj", label: "Sumber Dana / PJ Penanggungjawab", required: true, placeholder: "Contoh: Kas Karang Taruna" },
         { id: "tanggal", label: "Tanggal Transaksi", type: "date", required: true, value: new Date().toISOString().slice(0, 10) }
       ], (data) => {
-        const id = "bg-" + Date.now();
+        const id = genId("bg");
         Supa.save('anggaran', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
@@ -3316,7 +3353,7 @@
         { id: "paket_sponsor", label: "Paket Sponsor Diambil", type: "select", options: ["Platinum (Utama)", "Gold", "Silver", "Donatur Bebas"] },
         { id: "status", label: "Status Kerjasama", type: "select", options: ["Negosiasi", "MoU Ditandatangani", "Dana Cair"] }
       ], (data) => {
-        const id = "sp-" + Date.now();
+        const id = genId("sp");
         Supa.save('sponsor', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
@@ -3352,106 +3389,10 @@
       });
     }
 
-    // Inventaris View Renderer
-    function renderInventaris(container) {
-      const isAdmin = Auth.isAdmin();
-
-      const rowsHtml = (AppState.inventaris || []).filter(i => i.event_id === EventManager.getActiveEventId()).map(i => `
-        <tr>
-          <td style="font-weight:600;"><i data-lucide="package" style="width:14px; display:inline-block; vertical-align:middle;"></i> ${i.nama_barang}</td>
-          <td style="font-family: var(--font-mono); font-weight:700;">${i.jumlah} Unit</td>
-          <td>${i.penanggung_jawab}</td>
-          <td>${i.lokasi_penyimpanan}</td>
-          <td>
-            <span class="badge ${i.kondisi === 'Baik' ? 'badge-green' : i.kondisi === 'Dipinjam' ? 'badge-blue' : 'badge-red'}">
-              ${i.kondisi}
-            </span>
-          </td>
-          ${isAdmin ? `
-            <td class="no-print">
-              <button class="btn btn-secondary btn-sm" onclick="editInventaris('${i.id}')"><i data-lucide="edit-2" style="width:12px; height:12px;"></i></button>
-              <button class="btn btn-danger btn-sm" onclick="deleteInventaris('${i.id}')"><i data-lucide="trash-2" style="width:12px; height:12px;"></i></button>
-            </td>
-          ` : ""}
-        </tr>
-      `).join('');
-
-      container.innerHTML = `
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1.5rem;">
-          <p style="color: var(--text-secondary); font-size: 0.9rem;">Manajemen perlengkapan, persewaan sound system, tenda, piala, dan logistik pesta.</p>
-          ${isAdmin ? `<button class="btn btn-primary" onclick="addInventaris()"><i data-lucide="plus"></i> Tambah Inventaris</button>` : ""}
-        </div>
-
-        <div class="card">
-          <div class="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Nama Barang</th>
-                  <th>Jumlah Stok</th>
-                  <th>Penanggung Jawab (PJ)</th>
-                  <th>Lokasi Penyimpanan</th>
-                  <th>Kondisi Barang</th>
-                  ${isAdmin ? `<th class="no-print">Aksi</th>` : ""}
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml || "<tr><td colspan='6' style='text-align:center;'>Daftar perlengkapan kosong.</td></tr>"}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
-    }
-
-    function addInventaris() {
-      if (!Auth.isAdmin()) {
-        Toast.show("Akses ditolak! Khusus Admin Desa.", "error");
-        return;
-      }
-      UI.openGenericModal("Tambah Inventaris Barang", [
-        { id: "nama_barang", label: "Nama Barang / Alat", required: true, placeholder: "Contoh: Sound System Aktif" },
-        { id: "jumlah", label: "Jumlah Unit (Angka Saja)", type: "number", required: true, placeholder: "Contoh: 2" },
-        { id: "penanggung_jawab", label: "PJ Penanggungjawab", required: true, placeholder: "Contoh: Mas Budi" },
-        { id: "lokasi_penyimpanan", label: "Lokasi Penyimpanan Barang", required: true, placeholder: "Contoh: Aula Balai Desa" },
-        { id: "kondisi", label: "Kondisi Barang", type: "select", options: ["Baik", "Dipinjam", "Rusak / Perbaikan"] }
-      ], (data) => {
-        const id = "inv-" + Date.now();
-        Supa.save('inventaris', { id, event_id: EventManager.getActiveEventId(), ...data });
-        UI.refreshCurrentView();
-      });
-    }
-
-    function editInventaris(id) {
-      if (!Auth.isAdmin()) {
-        Toast.show("Akses ditolak! Khusus Admin Desa.", "error");
-        return;
-      }
-      const i = AppState.inventaris.find(x => x.id === id);
-      if (!i) return;
-
-      UI.openGenericModal("Edit Inventaris Barang", [
-        { id: "nama_barang", label: "Nama Barang / Alat", value: i.nama_barang, required: true },
-        { id: "jumlah", label: "Jumlah Unit (Angka Saja)", type: "number", value: i.jumlah, required: true },
-        { id: "penanggung_jawab", label: "PJ Penanggungjawab", value: i.penanggung_jawab, required: true },
-        { id: "lokasi_penyimpanan", label: "Lokasi Penyimpanan Barang", value: i.lokasi_penyimpanan, required: true },
-        { id: "kondisi", label: "Kondisi Barang", type: "select", options: ["Baik", "Dipinjam", "Rusak / Perbaikan"], value: i.kondisi }
-      ], (data) => {
-        Supa.save('inventaris', { ...i, ...data });
-        UI.refreshCurrentView();
-      });
-    }
-
-    function deleteInventaris(id) {
-      if (!Auth.isAdmin()) {
-        Toast.show("Akses ditolak! Khusus Admin Desa.", "error");
-        return;
-      }
-      UI.openDeleteConfirm(() => {
-        Supa.delete('inventaris', id);
-        UI.refreshCurrentView();
-      });
-    }
+    // NOTE: Tab "Inventaris Barang" telah dihapus dari UI atas permintaan —
+    // pengelolaan barang/logistik dilakukan manual oleh panitia. Data lama
+    // pada AppState.inventaris & tabel pesta17_inventaris tetap dibiarkan
+    // apa adanya (tidak dihapus) supaya backup/restore lama tidak rusak.
   </script>
 
   <!-- 7. Render Modules (Part D: Dokumentasi, Laporan, Settings) -->
@@ -3517,7 +3458,7 @@
         { id: "dusun_asal", label: "Dusun Asal", required: true, placeholder: "Contoh: Dusun Krajan Satu" },
         { id: "no_hp", label: "No HP / WhatsApp", placeholder: "Contoh: 0857..." }
       ], (data) => {
-        const id = "pn-" + Date.now();
+        const id = genId("pn");
         Supa.save('panitia', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
@@ -3601,7 +3542,7 @@
         { id: "diunggah_oleh", label: "Penanggung Jawab Dokumentasi", required: true, placeholder: "Contoh: Seksi Dokumentasi" },
         { id: "tanggal_unggah", label: "Tanggal Foto Diambil", type: "date", required: true, value: new Date().toISOString().slice(0, 10) }
       ], (data) => {
-        const id = "dk-" + Date.now();
+        const id = genId("dk");
         Supa.save('dokumentasi', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
@@ -4262,10 +4203,36 @@
         navigator.serviceWorker.register('/service-worker.js', { scope: '/' })
           .then((reg) => {
             console.log('[PWA] Service Worker registered, scope:', reg.scope);
+            // Selalu cek update SW terbaru saat app dibuka, jangan tunggu
+            // browser melakukan ini sendiri (bisa butuh berjam-jam).
+            reg.update().catch(() => {});
+
+            // Saat versi baru sudah ter-install & siap dipakai, beri tahu
+            // pengguna supaya reload — sehingga perbaikan bug baru langsung
+            // aktif, bukan tersangkut di cache lama.
+            reg.addEventListener('updatefound', () => {
+              const newWorker = reg.installing;
+              if (!newWorker) return;
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  if (typeof Toast !== 'undefined' && Toast.show) {
+                    Toast.show('Versi baru aplikasi tersedia. Memuat ulang...', 'info');
+                  }
+                  setTimeout(() => window.location.reload(), 1200);
+                }
+              });
+            });
           })
           .catch((err) => {
             console.warn('[PWA] Service Worker registration failed:', err);
           });
+      });
+
+      // Jika worker aktif berubah (skipWaiting), reload sekali agar konsisten.
+      let _swRefreshed = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_swRefreshed) return;
+        _swRefreshed = true;
       });
     }
 
