@@ -2248,7 +2248,7 @@
 
     // Informasi Acara View Renderer
     function renderInfo(container) {
-      const info = AppState.info;
+      const info = EventManager.getActiveEventInfo();
       const isAdmin = Auth.isAdmin();
 
       // Read FAQ list
@@ -2310,7 +2310,7 @@
         Toast.show("Akses ditolak! Khusus Admin Desa.", "error");
         return;
       }
-      const info = AppState.info;
+      const info = EventManager.getActiveEventInfo();
       UI.openGenericModal("Edit Informasi Acara", [
         { id: "nama_kegiatan", label: "Nama Kegiatan", value: info.nama_kegiatan, required: true },
         { id: "tema", label: "Tema Kegiatan", value: info.tema, required: true },
@@ -2321,7 +2321,7 @@
         { id: "kontak_panitia", label: "Kontak Panitia (Tiap Baris)", type: "textarea", value: info.kontak_panitia, required: true },
         { id: "pengumuman", label: "Pengumuman Tambahan", type: "textarea", value: info.pengumuman, required: true }
       ], (data) => {
-        Supa.save('info', data);
+        Supa.save('info', { ...info, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -2330,7 +2330,7 @@
     function renderTimeline(container) {
       const isAdmin = Auth.isAdmin();
       
-      const rowsHtml = AppState.timeline.map(t => `
+      const rowsHtml = AppState.timeline.filter(t => t.event_id === EventManager.getActiveEventId()).map(t => `
         <tr>
           <td style="font-weight: 600;">${t.nama_kegiatan}</td>
           <td>${t.tanggal_target}</td>
@@ -2403,7 +2403,7 @@
         { id: "tanggal_target", label: "Target Selesai", type: "date", required: true, value: new Date().toISOString().slice(0, 10) },
         { id: "status", label: "Status Awal", type: "select", options: ["Belum Mulai", "Proses", "Selesai"] }
       ], (data) => {
-        const newTask = { id: "tl-" + Date.now(), ...data };
+        const newTask = { id: "tl-" + Date.now(), event_id: EventManager.getActiveEventId(), ...data };
         Supa.save('timeline', newTask);
         UI.refreshCurrentView();
       });
@@ -2988,7 +2988,7 @@
       const isAdmin = Auth.isAdmin();
       const dusunMap = Object.fromEntries(AppState.dusun.map(d => [d.id, d.nama]));
 
-      const cardsHtml = AppState.lomba.map(l => {
+      const cardsHtml = (AppState.lomba || []).filter(l => l.event_id === EventManager.getActiveEventId()).map(l => {
         const pod1 = dusunMap[l.juara_1] || "<span style='color:var(--text-secondary); font-weight:normal;'>- Belum Dinilai -</span>";
         const pod2 = dusunMap[l.juara_2] || "-";
         const pod3 = dusunMap[l.juara_3] || "-";
@@ -3119,15 +3119,16 @@
       const formatIDR = (num) => "Rp " + new Intl.NumberFormat('id-ID').format(num);
 
       // Calculations
-      const pemasukanList = AppState.anggaran.filter(a => a.kategori === "Pemasukan");
-      const pengeluaranList = AppState.anggaran.filter(a => a.kategori === "Pengeluaran");
+      const _anggaranActive = (AppState.anggaran || []).filter(a => a.event_id === EventManager.getActiveEventId());
+      const pemasukanList = _anggaranActive.filter(a => a.kategori === "Pemasukan");
+      const pengeluaranList = _anggaranActive.filter(a => a.kategori === "Pengeluaran");
 
       const totalMasuk = pemasukanList.reduce((sum, x) => sum + x.nominal, 0);
       const totalKeluar = pengeluaranList.reduce((sum, x) => sum + x.nominal, 0);
       const sisa = totalMasuk - totalKeluar;
 
       // Table mapping
-      const rowsHtml = AppState.anggaran.map(a => `
+      const rowsHtml = _anggaranActive.map(a => `
         <tr>
           <td style="font-weight:600;">${a.deskripsi}</td>
           <td><span class="badge ${a.kategori === 'Pemasukan' ? 'badge-green' : 'badge-red'}">${a.kategori}</span></td>
@@ -3243,7 +3244,7 @@
       const isAdmin = Auth.isAdmin();
       const formatIDR = (num) => "Rp " + new Intl.NumberFormat('id-ID').format(num);
 
-      const cardsHtml = AppState.sponsor.map(s => {
+      const cardsHtml = (AppState.sponsor || []).filter(s => s.event_id === EventManager.getActiveEventId()).map(s => {
         // Status Badge Mapping
         let statusBadge = "badge-gray";
         if (s.status === "Dana Cair") statusBadge = "badge-green";
@@ -3343,7 +3344,7 @@
     function renderInventaris(container) {
       const isAdmin = Auth.isAdmin();
 
-      const rowsHtml = AppState.inventaris.map(i => `
+      const rowsHtml = (AppState.inventaris || []).filter(i => i.event_id === EventManager.getActiveEventId()).map(i => `
         <tr>
           <td style="font-weight:600;"><i data-lucide="package" style="width:14px; display:inline-block; vertical-align:middle;"></i> ${i.nama_barang}</td>
           <td style="font-family: var(--font-mono); font-weight:700;">${i.jumlah} Unit</td>
@@ -3450,7 +3451,7 @@
       const roles = ["Ketua Panitia", "Wakil Ketua", "Sekretaris", "Bendahara", "Seksi Acara", "Seksi Humas & Sponsor", "Seksi Logistik", "Seksi Konsumsi", "Seksi Keamanan & Medis"];
 
       // Group by roles or list
-      const rowsHtml = AppState.panitia.map(p => `
+      const rowsHtml = (AppState.panitia || []).filter(p => p.event_id === EventManager.getActiveEventId()).map(p => `
         <tr>
           <td style="font-weight:700;"><i data-lucide="user" style="width:14px; display:inline-block; vertical-align:middle; margin-right:4px;"></i> ${p.nama_lengkap}</td>
           <td><span class="badge badge-blue">${p.jabatan}</span></td>
@@ -3546,7 +3547,7 @@
     function renderDokumentasi(container) {
       const isAdmin = Auth.isAdmin();
 
-      const itemsHtml = AppState.dokumentasi.map(d => `
+      const itemsHtml = (AppState.dokumentasi || []).filter(d => d.event_id === EventManager.getActiveEventId()).map(d => `
         <div class="card" style="padding:0; overflow:hidden; display:flex; flex-direction:column; justify-content:space-between; margin-bottom:0;">
           <img src="${d.foto_base64 || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=500'}" alt="${d.keterangan}" style="width:100%; height:180px; object-fit:cover; background-color:#222;" referrerpolicy="no-referrer">
           <div style="padding:1rem;">
