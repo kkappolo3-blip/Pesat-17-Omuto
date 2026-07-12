@@ -1708,7 +1708,7 @@
             return `
               <div class="form-group">
                 <label>${f.label}</label>
-                <input type="${f.type || 'text'}" id="field-${f.id}" class="form-control" value="${val}" ${placeholderAttr} ${requiredAttr}>
+                <input type="${f.type || 'text'}" id="field-${f.id}" class="form-control" value="${f.type === 'password' ? '' : val}" ${placeholderAttr} ${requiredAttr} ${f.type === 'password' ? 'autocomplete="new-password"' : ''}>
               </div>
             `;
           }
@@ -1720,7 +1720,9 @@
               <h2 class="card-title">${title}</h2>
               <button class="btn btn-secondary btn-sm" onclick="UI.closeModal()"><i data-lucide="x"></i></button>
             </div>
-            <form id="modal-form">
+            <form id="modal-form" autocomplete="off">
+              <input type="text" style="display:none" aria-hidden="true" tabindex="-1">
+              <input type="password" style="display:none" aria-hidden="true" tabindex="-1">
               <div class="modal-body">${fieldsHtml}</div>
               <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="UI.closeModal()">Batal</button>
@@ -3814,7 +3816,7 @@
               <form id="form-change-pin" style="display:flex; flex-direction:column; gap:0.75rem;">
                 <div class="form-group" style="margin:0;">
                   <label>Masukkan PIN Baru (Minimal 4 Angka)</label>
-                  <input type="password" class="form-control" id="settings-pin" required placeholder="Default: 88040773">
+                  <input type="password" class="form-control" id="settings-pin" required placeholder="Masukkan PIN baru">
                 </div>
                 <button type="submit" class="btn btn-primary" style="align-self:flex-start;">Ganti Kode PIN</button>
               </form>
