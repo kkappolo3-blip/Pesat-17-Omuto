@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline — PESTA 17</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: #F1F5F9;
+      color: #0F172A;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5rem;
+    }
+    .card {
+      background: #FFFFFF;
+      border-radius: 16px;
+      padding: 2.5rem 2rem;
+      text-align: center;
+      max-width: 360px;
+      width: 100%;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+    }
+    .icon {
+      width: 72px;
+      height: 72px;
+      background: #FEE2E2;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 1.5rem;
+    }
+    .icon svg { width: 36px; height: 36px; color: #DC2626; }
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+      color: #0F172A;
+    }
+    p {
+      font-size: 0.9rem;
+      color: #64748B;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid #E2E8F0;
+      width: 100%;
+      justify-content: center;
+    }
+    .brand-dot {
+      width: 28px; height: 28px;
+      background: linear-gradient(135deg, #DC2626, #9B1C1C);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff;
+      font-weight: 900;
+      font-size: 0.75rem;
+    }
+    .brand-name { font-weight: 700; font-size: 0.85rem; color: #64748B; }
+    button {
+      background: #DC2626;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0.65rem 1.5rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    button:hover { background: #B91C1C; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 6s0-2 2-2h12s2 0 2 2v12s0 2-2 2H3s-2 0-2-2z"/>
+        <line x1="1" y1="6" x2="17" y2="6"/>
+        <path d="M19 8l2 2-2 2"/>
+        <path d="M21 10H17"/>
+      </svg>
+    </div>
+    <h1>Anda sedang offline.</h1>
+    <p>Tunggu hingga koneksi internet tersedia.<br>
+    Saat online, aplikasi akan kembali bekerja seperti biasa.</p>
+    <button onclick="location.reload()">Coba Lagi</button>
+    <div class="brand">
+      <div class="brand-dot">17</div>
+      <span class="brand-name">PESTA 17</span>
+    </div>
+  </div>
+</body>
+</html>
