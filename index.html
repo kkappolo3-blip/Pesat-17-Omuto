@@ -2104,6 +2104,8 @@
           
           // Merge details
           const merged = { ...info, ...result };
+          merged.id = merged.id || ('inf-' + Date.now());
+          merged.event_id = merged.event_id || EventManager.getActiveEventId();
           logActivity("Dashboard", "Memperbarui konfigurasi utama acara");
           await Supa.save('info', merged);
           
@@ -2321,7 +2323,10 @@
         { id: "kontak_panitia", label: "Kontak Panitia (Tiap Baris)", type: "textarea", value: info.kontak_panitia, required: true },
         { id: "pengumuman", label: "Pengumuman Tambahan", type: "textarea", value: info.pengumuman, required: true }
       ], (data) => {
-        Supa.save('info', { ...info, ...data });
+        const merged = { ...info, ...data };
+        merged.id = merged.id || ('inf-' + Date.now());
+        merged.event_id = merged.event_id || EventManager.getActiveEventId();
+        Supa.save('info', merged);
         UI.refreshCurrentView();
       });
     }
@@ -2422,7 +2427,7 @@
         { id: "tanggal_target", label: "Target Selesai", type: "date", value: task.tanggal_target, required: true },
         { id: "status", label: "Status", type: "select", options: ["Belum Mulai", "Proses", "Selesai"], value: task.status }
       ], (data) => {
-        Supa.save('timeline', { id, ...data });
+        Supa.save('timeline', { ...task, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -2757,7 +2762,7 @@
         { id: "catatan", label: "Keterangan / Slogan", type: "textarea", placeholder: "Contoh: Unggul di panjat tebing." }
       ], (data) => {
         const id = "dsn-" + Date.now();
-        Supa.save('dusun', { id, ...data });
+        Supa.save('dusun', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -2775,7 +2780,7 @@
         { id: "ketua_kontingen", label: "Ketua Kontingen", value: d.ketua_kontingen, required: true },
         { id: "catatan", label: "Keterangan / Slogan", type: "textarea", value: d.catatan }
       ], (data) => {
-        Supa.save('dusun', { id, ...data });
+        Supa.save('dusun', { ...d, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -2942,7 +2947,7 @@
         { id: "status_kehadiran", label: "Status Kehadiran Awal", type: "select", options: ["Hadir", "Belum Hadir"] }
       ], (data) => {
         const id = "pst-" + Date.now();
-        Supa.save('peserta', { id, ...data });
+        Supa.save('peserta', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -2967,7 +2972,7 @@
         { id: "no_hp", label: "No HP / WhatsApp Atlet", value: p.no_hp },
         { id: "status_kehadiran", label: "Status Kehadiran", type: "select", options: ["Hadir", "Belum Hadir"], value: p.status_kehadiran }
       ], (data) => {
-        Supa.save('peserta', { id, ...data });
+        Supa.save('peserta', { ...p, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3052,7 +3057,7 @@
         { id: "juri", label: "Nama Penilai / Juri Utama", required: true, placeholder: "Contoh: Mas Agus" }
       ], (data) => {
         const id = "lmb-" + Date.now();
-        Supa.save('lomba', { id, juara_1: "", juara_2: "", juara_3: "", ...data });
+        Supa.save('lomba', { id, event_id: EventManager.getActiveEventId(), juara_1: "", juara_2: "", juara_3: "", ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3203,7 +3208,7 @@
         { id: "tanggal", label: "Tanggal Transaksi", type: "date", required: true, value: new Date().toISOString().slice(0, 10) }
       ], (data) => {
         const id = "bg-" + Date.now();
-        Supa.save('anggaran', { id, ...data });
+        Supa.save('anggaran', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3223,7 +3228,7 @@
         { id: "sumber_dana_atau_pj", label: "Sumber Dana / PJ Penanggungjawab", value: b.sumber_dana_atau_pj, required: true },
         { id: "tanggal", label: "Tanggal Transaksi", type: "date", value: b.tanggal, required: true }
       ], (data) => {
-        Supa.save('anggaran', { id, ...data });
+        Supa.save('anggaran', { ...b, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3305,7 +3310,7 @@
         { id: "status", label: "Status Kerjasama", type: "select", options: ["Negosiasi", "MoU Ditandatangani", "Dana Cair"] }
       ], (data) => {
         const id = "sp-" + Date.now();
-        Supa.save('sponsor', { id, ...data });
+        Supa.save('sponsor', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3324,7 +3329,7 @@
         { id: "paket_sponsor", label: "Paket Sponsor Diambil", type: "select", options: ["Platinum (Utama)", "Gold", "Silver", "Donatur Bebas"], value: s.paket_sponsor },
         { id: "status", label: "Status Kerjasama", type: "select", options: ["Negosiasi", "MoU Ditandatangani", "Dana Cair"], value: s.status }
       ], (data) => {
-        Supa.save('sponsor', { id, ...data });
+        Supa.save('sponsor', { ...s, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3405,7 +3410,7 @@
         { id: "kondisi", label: "Kondisi Barang", type: "select", options: ["Baik", "Dipinjam", "Rusak / Perbaikan"] }
       ], (data) => {
         const id = "inv-" + Date.now();
-        Supa.save('inventaris', { id, ...data });
+        Supa.save('inventaris', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3425,7 +3430,7 @@
         { id: "lokasi_penyimpanan", label: "Lokasi Penyimpanan Barang", value: i.lokasi_penyimpanan, required: true },
         { id: "kondisi", label: "Kondisi Barang", type: "select", options: ["Baik", "Dipinjam", "Rusak / Perbaikan"], value: i.kondisi }
       ], (data) => {
-        Supa.save('inventaris', { id, ...data });
+        Supa.save('inventaris', { ...i, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3506,7 +3511,7 @@
         { id: "no_hp", label: "No HP / WhatsApp", placeholder: "Contoh: 0857..." }
       ], (data) => {
         const id = "pn-" + Date.now();
-        Supa.save('panitia', { id, ...data });
+        Supa.save('panitia', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3527,7 +3532,7 @@
         { id: "dusun_asal", label: "Dusun Asal", value: p.dusun_asal, required: true },
         { id: "no_hp", label: "No HP / WhatsApp", value: p.no_hp }
       ], (data) => {
-        Supa.save('panitia', { id, ...data });
+        Supa.save('panitia', { ...p, ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3590,7 +3595,7 @@
         { id: "tanggal_unggah", label: "Tanggal Foto Diambil", type: "date", required: true, value: new Date().toISOString().slice(0, 10) }
       ], (data) => {
         const id = "dk-" + Date.now();
-        Supa.save('dokumentasi', { id, ...data });
+        Supa.save('dokumentasi', { id, event_id: EventManager.getActiveEventId(), ...data });
         UI.refreshCurrentView();
       });
     }
@@ -3609,7 +3614,7 @@
         { id: "diunggah_oleh", label: "Penanggung Jawab Dokumentasi", value: d.diunggah_oleh, required: true },
         { id: "tanggal_unggah", label: "Tanggal Foto Diambil", type: "date", value: d.tanggal_unggah, required: true }
       ], (data) => {
-        Supa.save('dokumentasi', { id, ...data });
+        Supa.save('dokumentasi', { ...d, ...data });
         UI.refreshCurrentView();
       });
     }
